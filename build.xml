@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="KCback"
+         default="default"
+         basedir="."
+         xmlns:fx="javafx:com.sun.javafx.tools.ant">
+
+    <!--
+   Project structure:
+   PROJECT_NAME/src              Sources folder
+   PROJECT_NAME/lib              Folder of external jar files
+   PROJECT_NAME/build            Folder for the output
+   PROJECT_NAME/build/classes    Folder that will contain the class files
+   PROJECT_NAME/build/dist       Folder that will contain the jar file
+   PROJECT_NAME/build/bundles    Folder that will contain the native package
+   -->
+
+    <property name="application.title" value="KCback"/>
+    <property name="vendor.name" value="PranayKarani"/>
+    <property name="JAVA_HOME" value="C:/Program Files/Java/jdk1.8.0_74"/>
+    <property name="source.dir" value="src"/>
+    <!--<property name="lib.dir" value="lib"/>-->
+    <property name="out.dir" value="out"/>
+    <property name="out.dir.classes" value="${out.dir}/classes"/>
+    <property name="out.dir.dist" value="${out.dir}/dist"/>
+    <property name="out.dir.dist.lib" value="${out.dir.dist}/lib"/>
+    <property name="app.jar.name" value="KCback.jar"/>
+    <property name="main.class" value="com.kc.KC"/>
+    <!--<property name="manifest.classpath" value="lib"/>-->
+
+    <!--<path id="external.jars">-->
+        <!--<fileset dir="${lib.dir}" includes="**/*.jar"/>-->
+    <!--</path>-->
+
+    <path id="classpath">
+        <fileset dir="${java.home}/lib" includes="**/*.jar"/>
+        <!--<path refid="external.jars"/>-->
+    </path>
+
+    <target name="default">
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+                 uri="javafx:com.sun.javafx.tools.ant"
+                 classpath=".:${JAVA_HOME}/lib/ant-javafx.jar"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="${out.dir}"/>
+    </target>
+
+    <target name="init" depends="clean">
+        <mkdir dir="${out.dir}"/>
+        <mkdir dir="${out.dir.classes}"/>
+        <mkdir dir="${out.dir.dist}"/>
+    </target>
+
+    <target name="compile" depends="default, init">
+        <javac srcdir="${source.dir}" destdir="${out.dir}/classes" classpathref="classpath"
+               source="1.8"
+               target="1.8" />
+        <copy todir="${out.dir}/classes">
+            <!-- Define all filetypes that you need in your project -->
+            <fileset dir="${source.dir}">
+                <include name="**/*.png"/>
+                <include name="**/*.fxml"/>
+                <include name="**/*.css"/>
+                <include name="**/*.wav"/>
+                <include name="**/*.ttf"/>
+                <include name="**/*.otf"/>
+                <include name="**/*.html"/>
+            </fileset>
+        </copy>
+        <!--<copy todir="${out.dir.dist.lib}">-->
+            <!--<fileset dir="${lib.dir}">-->
+                <!--<include name="**/*.jar"/>-->
+            <!--</fileset>-->
+        <!--</copy>-->
+    </target>
+
+    <target name="build" depends="compile">
+        <fx:application id="KCback" mainClass="${main.class}"/>
+
+        <!-- Create the jar file -->
+        <fx:jar destfile="${out.dir.dist}/${app.jar.name}">
+            <fx:application refid="${application.title}"/>
+
+            <manifest>
+                <attribute name="Implementation-Vendor" value="${vendor.name}"/>
+                <attribute name="Implementation-Title" value="${application.title}"/>
+                <attribute name="Implementation-Version" value="1.0"/>
+                <attribute name="Class-Path" value="${out.dir.dist.lib}"/>
+                <attribute name="Main-Class" value="com/javafx/main/Main"/>
+                <attribute name="JavaFX-Application-Class" value="${main.class}"/>
+                <!--<attribute name="JavaFX-Class-Path" value="${manifest.externaljars}"/>-->
+            </manifest>
+
+            <fileset dir="${out.dir.classes}"/>
+        </fx:jar>
+
+        <!-- Create the native package -->
+        <fx:deploy verbose="true"
+                   width="200"
+                   height="400"
+                   nativeBundles="all"
+                   outdir="${out.dir.dist}"
+                   outfile="${application.title}">
+            <fx:application name="KCback" mainClass="${main.class}"/>
+
+            <fx:preferences id="KCback" menu="true" install="true"/>
+
+            <fx:resources>
+                <fx:fileset dir="${out.dir.dist}" includes="*.jar"/>
+                <fx:fileset dir="${out.dir.dist}" includes="lib/*.jar"/>
+            </fx:resources>
+            <fx:info title="${application.title}" vendor="${vendor.name}">
+
+				<fx:icon href="KCback.ico" kind="default"/>
+			
+			</fx:info>
+        </fx:deploy>
+    </target>
+</project>
