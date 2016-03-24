@@ -1,5 +1,6 @@
 package com.kc.windows; // 13 Mar, 12:56 PM
 
+import com.kc.Utilities.C;
 import com.kc.Utilities.DatabaseHelper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -25,27 +26,23 @@ import javafx.util.Callback;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import static com.kc.Controllers.MainController.ERROR;
-import static com.kc.Controllers.MainController.SUCCESS;
-import static com.kc.Controllers.MainController.WARN;
+import static com.kc.Controllers.MainController.*;
 
 /**
  * Executes SQL query on the database and displays results in a popup window
  */
 public class SQLResults {
 
-    String query;
-    int    noofRows;
-    int    noofCols;
-
-    // query type;
-    int TYPE;
     final int SELECT  = 0;
     final int INSERT  = 1;
     final int UPDATE  = 2;
     final int DELETE  = 3;
     final int INVALID = -1;
-
+    String query;
+    int noofRows;
+    int noofCols;
+    // query type;
+    int TYPE;
     // UI stuff
     BorderPane              mainLayout;
     VBox                    box;
@@ -91,9 +88,8 @@ public class SQLResults {
             case SELECT:
                 try {
                     cursor = DatabaseHelper.launchQuery(limitQuery(query));
-
                     if (cursor == null) {
-                        setStatus("Something went wrong, recheck SQL syntax", ERROR);
+                        setStatus(C.SQL_RESULT, ERROR);
                         break;
                     }
 

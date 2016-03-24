@@ -1,7 +1,7 @@
 package com.kc.windows; // 04 Mar, 04:06 PM
 
-import com.kc.entity.Student;
 import com.kc.Utilities.DatabaseHelper;
+import com.kc.entity.Student;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -26,10 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
-import static com.kc.Controllers.MainController.ERROR;
-import static com.kc.Controllers.MainController.OK;
-import static com.kc.Controllers.MainController.SUCCESS;
-import static com.kc.Controllers.MainController.WARN;
+import static com.kc.Controllers.MainController.*;
 
 public class AttendanceSheet {
 
@@ -69,7 +66,7 @@ public class AttendanceSheet {
         statusBar.setPadding(new Insets(2, 2, 2, 2));
 
         // Getting data from attendance database
-        ResultSet cursor = DatabaseHelper.launchQuery("SELECT * FROM Student WHERE current_sem = " + sem);
+        ResultSet cursor = DatabaseHelper.launchQuery("SELECT * FROM student WHERE current_sem = " + sem + " ORDER BY roll_no ASC");
         int noofStudents = 0;
         try {
 
@@ -113,8 +110,8 @@ public class AttendanceSheet {
          noof columns = noofStudents / 20
          actual colums = (noof columns) * 2 bcoz, rollno-check box combination
          */
-        int gridRows = 20;
-        int gridColumns = 10;
+        int gridRows = 2;
+        int gridColumns = 2;
         GridPane grid = new GridPane();
         grid.setHgap(10);
         for (int y = 0; y < gridRows; y++) {

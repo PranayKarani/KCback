@@ -1,20 +1,16 @@
 package com.kc.Controllers; // 04 Mar, 05:40 PM
 
-import com.kc.windows.AttendanceSheet;
-import com.kc.windows.NoticeHistory;
-import com.kc.windows.SQLResults;
 import com.kc.Utilities.C;
 import com.kc.Utilities.DatabaseHelper;
 import com.kc.Utilities.RemoteDatabaseConnecter;
+import com.kc.entity.Staff;
+import com.kc.windows.AttendanceSheet;
+import com.kc.windows.NoticeHistory;
+import com.kc.windows.SQLResults;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
+import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 
 import java.io.IOException;
@@ -27,72 +23,73 @@ import java.util.ResourceBundle;
 
 public class MainController implements Initializable {
 
-    // Send Notice Stuff
-    public ChoiceBox<String> to_choice;
+    //status types
+    public static final int OK = 0;
+    public static final int ERROR = 1;
+    public static final int WARN = 2;
+    public static final int SUCCESS = 3;
     final String ALL = "all students";
-    final String FY  = "F.Y.BSc. I.T. students";
-    final String SY  = "S.Y. BSc. I.T. students";
-    final String TY  = "T.Y. BSc. I.T. students";
-
-    public TextField from_text;
-    public TextField header_text;
-    public TextArea  notice_text;
-    public Button    sendNotice_button;
-
-    // Attendance Stuff
-    public ChoiceBox<Integer> as_sem_choice;
-    public String[]           as_subject_names;
-    public ChoiceBox<String>  as_sub_choice;
-    public DatePicker         as_datePicker;
-
-
-    // Time Table Stuff
-
+    final String FY = "F.Y.BSc. I.T. students";
+    final String SY = "S.Y. BSc. I.T. students";
+    final String TY = "T.Y. BSc. I.T. students";
     final String MON = "Monday";
     final String TUE = "Tuesday";
     final String WED = "Wednesday";
     final String THR = "Thursday";
     final String FRI = "Friday";
+
+
+    // Time Table Stuff
     final String SAT = "Saturday";
-
-    public ChoiceBox<Integer> tt_sem_choice;
-    public String[]           tt_subject_names;
-    public String[]           tt_subject_teachers;
-    public ChoiceBox<String>  tt_sub_choice;
-    public ChoiceBox<String>  tt_day_choice;
-    public ChoiceBox<String>  tt_start_ampm_choice;
-    public ChoiceBox<String>  tt_end_ampm_choice;
-
     final String AM = "am";
     final String PM = "pm";
-
     final int tt_maxLength = 2;
+    // Send Notice Stuff
+    public ChoiceBox<String> to_choice;
+    public Label from_text;
+    public TextField header_text;
+    public TextArea notice_text;
+    public Button sendNotice_button;
+    // Attendance Stuff
+    public ChoiceBox<Integer> as_sem_choice;
+    public String[] as_subject_names;
+    public ChoiceBox<String> as_sub_choice;
+    public DatePicker as_datePicker;
+    public ChoiceBox<Integer> tt_sem_choice;
+    public String[] tt_subject_names;
+    public String[] tt_subject_teachers;
+    public ChoiceBox<String> tt_sub_choice;
+    public ChoiceBox<String> tt_day_choice;
+    public ChoiceBox<String> tt_start_ampm_choice;
+    public ChoiceBox<String> tt_end_ampm_choice;
     public TextField tt_teacher;
     public TextField tt_start_hour;
     public TextField tt_start_min;
     public TextField tt_end_hour;
     public TextField tt_end_min;
-
-
     // SQL stuff
-    public TextArea           sql_query_text;
+    public TextArea sql_query_text;
     public ChoiceBox<Integer> resultRows_choice;
-
+    // Student insert stuff
+    public TextField si_id;
+    public TextField si_name;
+    public TextField si_roll_no;
+    public CheckBox si_active;
+    public ChoiceBox<Integer> si_sem;
+    public TextField si_email;
+    public Button si_submit;
+    public Button si_delete;
     // Common Stuff
-    public Label    statusbar_text;
+    public Label statusbar_text;
     public FlowPane statusbar;
-
-    //status types
-    public static final int OK      = 0;
-    public static final int ERROR   = 1;
-    public static final int WARN    = 2;
-    public static final int SUCCESS = 3;
+    private boolean studentPresent = false;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
 
 
         // Notice stuff
+        from_text.setText("From: " + Staff.NAME);
         to_choice.getItems().addAll(ALL, FY, SY, TY);
         to_choice.setValue(ALL);
         notice_text.setWrapText(true);
@@ -104,7 +101,6 @@ public class MainController implements Initializable {
                 .addListener(on_as_sem_change());
         as_subject_names = new String[5];
         as_datePicker.setValue(LocalDate.now());
-
 
 
         // Time Table
@@ -132,10 +128,21 @@ public class MainController implements Initializable {
         tt_end_min.textProperty().addListener(textLimiter(tt_maxLength, tt_end_min));
 
 
-
         // SQL stuff
         resultRows_choice.getItems().setAll(5, 10, 15, 20, 25, 50);
         resultRows_choice.setValue(10);
+
+        // Student insert stuff
+        si_id.textProperty().addListener(on_si_id_change());
+        si_sem.getItems().setAll(1, 2, 3, 4, 5, 6);
+        si_sem.setValue(1);
+        si_active.setSelected(false);
+        si_submit.setText("insert");
+        si_delete.setDisable(true);
+
+
+        statusbar_text.setMaxWidth(600);
+        statusbar_text.setWrapText(true);
 
     }
 
@@ -153,7 +160,7 @@ public class MainController implements Initializable {
             setStatus("Notice body cannot be empty", WARN);
         } else {
 
-            String from = from_text.getText();
+            String from = Staff.NAME;
             String header = header_text.getText();
             String notice = notice_text.getText();
             int to = to_choice.getItems().indexOf(to_choice.getValue());
@@ -178,15 +185,24 @@ public class MainController implements Initializable {
      * Attendance tab
      */
 
-    ChangeListener on_as_sem_change(){
+    ChangeListener on_as_sem_change() {
         return (observable, oldValue, newValue) -> {
 
             int selectedSem = as_sem_choice.getValue();
 
             // get subjects for selected Sem from database
-            ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sem = " + newValue);
+            ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sem = " + newValue + " AND staff_id = " + Staff.ID);
             int i = 0;
             try {
+
+                int x = 0;
+                while (result.next()) {
+                    x++;
+                }
+                as_subject_names = new String[x];
+                System.out.println("Fethc: " + as_subject_names.length);
+
+                result.beforeFirst();
                 while (result.next()) {
                     as_subject_names[i] = result.getString("full_name");
                     i++;
@@ -359,7 +375,7 @@ public class MainController implements Initializable {
         };
     }
 
-    ChangeListener on_tt_day_change(){
+    ChangeListener on_tt_day_change() {
         return (observable, oldValue, newValue) -> {
 
             int selectedSem = tt_sem_choice.getValue();
@@ -520,7 +536,7 @@ public class MainController implements Initializable {
                                     " WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + dayID,
                             true);
 
-                    if(r.substring(0,3).equals("oxo")){
+                    if (r.substring(0, 3).equals("oxo")) {
                         statusString =
                                 "timings for " + selectedSubject + " updated, " +
                                         startTime_h + ":" + startTime_m + " " + tt_start_ampm_choice.getValue() + " to " +
@@ -535,10 +551,10 @@ public class MainController implements Initializable {
                     // insert
                     String r = DatabaseHelper.launchUpdate(
                             "INSERT INTO timetable(sub_ID, day_of_week, start_time, end_time, teacher)" +
-                                    "VALUES (" + selectedSubID + "," + dayID + "," + startTimeForQuery + ","+endTimeForQuery +","+insertTeacher+")",
+                                    "VALUES (" + selectedSubID + "," + dayID + "," + startTimeForQuery + "," + endTimeForQuery + "," + insertTeacher + ")",
                             false);
 
-                    if(r.substring(0,3).equals("oxo")){
+                    if (r.substring(0, 3).equals("oxo")) {
                         statusString =
                                 "timings for " + selectedSubject + " inserted, " +
                                         startTime_h + ":" + startTime_m + " " + tt_start_ampm_choice.getValue() + " to " +
@@ -554,7 +570,7 @@ public class MainController implements Initializable {
                 setStatus(e.getLocalizedMessage(), ERROR);
             }
 
-            setStatus(statusString, err?ERROR : SUCCESS);
+            setStatus(statusString, err ? ERROR : SUCCESS);
 
         }
     }
@@ -574,13 +590,117 @@ public class MainController implements Initializable {
 
     }
 
+    /**
+     * Student Insertion stuff
+     */
+
+    ChangeListener on_si_id_change() {
+        return (observable, oldValue, newValue) -> {
+
+            String id = si_id.getText();
+
+            if (id.length() > 3) {
+
+                ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM student WHERE student_id = " + id);
+                try {
+                    if (result.first()) {
+                        si_name.setText(result.getString("name"));
+                        si_roll_no.setText("" + result.getInt("roll_no"));
+                        si_sem.setValue(result.getInt("current_sem"));
+                        si_active.setSelected(result.getInt("active") == 1);
+                        si_email.setText(result.getString("email"));
+                        studentPresent = true;
+                        si_delete.setDisable(false);
+                        si_submit.setText("update");
+                        setStatus("student found!", OK);
+                    } else {
+                        si_name.clear();
+                        si_roll_no.clear();
+                        si_active.setSelected(false);
+                        si_email.clear();
+                        studentPresent = false;
+                        si_delete.setDisable(true);
+                        si_submit.setText("insert");
+                        setStatus("no student found", OK);
+                    }
+                } catch (SQLException e) {
+                    DatabaseHelper.close();
+                    setStatus(e.getLocalizedMessage(), ERROR);
+                }
+
+            } else {
+                studentPresent = false;// i don't why, but ...
+                setStatus("Keep typing...", OK);
+            }
+
+
+        };
+    }
+
+    public void onSISubmit(ActionEvent actionEvent) {
+
+        String ID = si_id.getText();
+        int ACTIVE = si_active.isSelected() ? 1 : 0;
+        int SEM = si_sem.getValue();
+        String ROLL_NO = si_roll_no.getText();
+        String NAME = "'" + si_name.getText() + "'";
+        String EMAIL = "'" + si_email.getText() + "'";
+
+        String query;
+        if (studentPresent) {
+            query = "UPDATE student " +
+                    "SET active = " + ACTIVE + "," +
+                    "current_sem = " + SEM + "," +
+                    "roll_no = " + ROLL_NO + "," +
+                    "name = " + NAME + "," +
+                    "email = " + EMAIL + " " +
+                    "WHERE student_id = " + ID;
+        } else {
+            query = "INSERT INTO student(student_id, active, current_sem, roll_no, name, email) " +
+                    "VALUES (" + ID + "," + ACTIVE + "," + SEM + "," + ROLL_NO + "," + NAME + "," + EMAIL + ")";
+        }
+
+        String statusString = DatabaseHelper.launchUpdate(query, studentPresent);
+        boolean err = false;
+
+        if (statusString.substring(0, 3).equals("oxo")) {
+            if (studentPresent) {
+                statusString = "updated";
+            } else {
+                statusString = "inserted";
+                studentPresent = true;
+                si_delete.setDisable(false);
+            }
+        } else {
+            err = true;
+        }
+
+        setStatus(statusString, err ? ERROR : SUCCESS);
+        System.out.println(studentPresent ? "update" : "insert");
+
+    }
+
+    public void onSIdelete(ActionEvent actionEvent) {
+
+        String statusString = DatabaseHelper.launchUpdate("DELETE FROM student WHERE student_id = " + si_id.getText(), false);
+        boolean err = false;
+        if (statusString.substring(0, 3).equals("oxo")) {
+            statusString = "Deleted!\nPress insert if deleted by mistake. NOTE: foreign key references can't be restored";
+            si_submit.setText("insert");
+            studentPresent = false;
+            si_delete.setDisable(true);
+        } else {
+            err = true;
+        }
+        setStatus(statusString, err ? ERROR : SUCCESS);
+
+    }
 
     /**
      * Common stuff
      */
 
     void setStatus(String text, int type) {
-        statusbar_text.setTooltip(new Tooltip(text));
         switch (type) {
             case ERROR:
                 statusbar.setStyle("-fx-background-color: #e892a0");
@@ -624,11 +744,7 @@ public class MainController implements Initializable {
         boolean isNumbers = false;
         for (int i = 0; i < s.length(); i++) {
             byte b = s.getBytes()[i];
-            if (b < 58 && b > 47) {
-                isNumbers = true;
-            } else {
-                isNumbers = false;
-            }
+            isNumbers = b < 58 && b > 47;
         }
         return isNumbers;
     }
@@ -662,6 +778,5 @@ public class MainController implements Initializable {
         time.append(h < 10 ? "0" + h : h).append(m < 10 ? "0" + m : m).append("00");
         return time.toString();
     }
-
 
 }
