@@ -110,8 +110,8 @@ public class AttendanceSheet {
          noof columns = noofStudents / 20
          actual colums = (noof columns) * 2 bcoz, rollno-check box combination
          */
-        int gridRows = 2;
-        int gridColumns = 2;
+        int gridRows = 20;
+        int gridColumns = 10;
         GridPane grid = new GridPane();
         grid.setHgap(10);
         for (int y = 0; y < gridRows; y++) {

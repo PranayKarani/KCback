@@ -17,10 +17,16 @@ public class KC extends Application {
         launch(args);
     }
 
-    // TODO staff login and specific details
-    // TODO check for internet connection before doing anything
+    // TODO Manage staff
+    // TODO Manage subject
+    // TODO Staff details for staff
+    // TODO status: "1 row" if only 1 row not "1 rows"
+    // TODO "Show my time table" for staff
+    // TODO password characters in login page
+    // TODO fix tabbing in student insert
     // TODO add "processing..." UI while sending notice (or progress update)
     // TODO SQL query buttons in launcher screen
+    // TODO check for internet connection before doing anything
 
     public static void loadApp() {
         try {

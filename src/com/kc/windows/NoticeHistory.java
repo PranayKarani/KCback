@@ -1,7 +1,8 @@
 package com.kc.windows; // 19 Mar, 01:21 AM
 
-import com.kc.entity.Notice;
 import com.kc.Utilities.DatabaseHelper;
+import com.kc.entity.Notice;
+import com.kc.entity.Staff;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -35,7 +36,11 @@ public class NoticeHistory {
     FlowPane               statusBar;
     Label                  status;
 
-    public NoticeHistory() throws IOException {
+    boolean all = false;
+
+    public NoticeHistory(boolean all) throws IOException {
+
+        this.all = all;
 
         Stage window = new Stage();
         window.setTitle("Notice History");
@@ -82,7 +87,15 @@ public class NoticeHistory {
 
         table.getColumns().setAll(header, from, to, date);
 
-        ResultSet cursor = DatabaseHelper.launchQuery("SELECT * FROM notice");
+        String query;
+
+        if (all) {
+            query = "SELECT * FROM notice";
+        } else {
+            query = "SELECT * FROM notice WHERE sender = " + Staff.ID;
+        }
+
+        ResultSet cursor = DatabaseHelper.launchQuery(query);
 
         try {
             while (cursor.next()) {

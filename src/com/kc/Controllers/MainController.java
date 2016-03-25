@@ -18,6 +18,7 @@ import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ResourceBundle;
 
@@ -57,7 +58,6 @@ public class MainController implements Initializable {
     public DatePicker as_datePicker;
     public ChoiceBox<Integer> tt_sem_choice;
     public String[] tt_subject_names;
-    public String[] tt_subject_teachers;
     public ChoiceBox<String> tt_sub_choice;
     public ChoiceBox<String> tt_day_choice;
     public ChoiceBox<String> tt_start_ampm_choice;
@@ -87,6 +87,10 @@ public class MainController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
 
+        String last_open = "You last login was at " + (Staff.LAST_OPEN == null ? "-" : Staff.LAST_OPEN);
+        setStatus(last_open, WARN);
+        String timestamp = "'" + LocalDateTime.now() + "'";
+        String resultSet = DatabaseHelper.launchUpdate("UPDATE staff SET last_open = " + timestamp + " WHERE staff_id = " + Staff.ID, true);
 
         // Notice stuff
         from_text.setText("From: " + Staff.NAME);
@@ -96,10 +100,11 @@ public class MainController implements Initializable {
 
         // Attendance Sheet
 
+        as_sem_choice.setDisable(Staff.HOD);
         as_sem_choice.getItems().setAll(1, 2, 3, 4, 5, 6);
         as_sem_choice.getSelectionModel().selectedItemProperty()
                 .addListener(on_as_sem_change());
-        as_subject_names = new String[5];
+//        as_subject_names = new String[5];
         as_datePicker.setValue(LocalDate.now());
 
 
@@ -108,8 +113,9 @@ public class MainController implements Initializable {
         tt_sem_choice.getItems().setAll(1, 2, 3, 4, 5, 6);
         tt_sem_choice.getSelectionModel().selectedItemProperty()
                 .addListener(on_tt_sem_change());
-        tt_subject_names = new String[5];
-        tt_subject_teachers = new String[5];
+//        tt_subject_names = new String[5];
+//        tt_subject_teachers = new String[5];
+        tt_teacher.setDisable(!Staff.HOD);
         tt_sub_choice.getSelectionModel().selectedItemProperty()
                 .addListener(on_tt_sub_change());
         tt_day_choice.getItems().setAll(MON, TUE, WED, THR, FRI, SAT);
@@ -121,11 +127,17 @@ public class MainController implements Initializable {
         tt_start_ampm_choice.setValue(AM);
         tt_start_hour.textProperty().addListener(textLimiter(tt_maxLength, tt_start_hour));
         tt_start_min.textProperty().addListener(textLimiter(tt_maxLength, tt_start_min));
+        // endable only if HOD
+        tt_start_hour.setDisable(Staff.HOD);
+        tt_start_min.setDisable(Staff.HOD);
         //  end time
         tt_end_ampm_choice.getItems().setAll(AM, PM);
         tt_end_ampm_choice.setValue(AM);
         tt_end_hour.textProperty().addListener(textLimiter(tt_maxLength, tt_end_hour));
         tt_end_min.textProperty().addListener(textLimiter(tt_maxLength, tt_end_min));
+        // enable only if HOD
+        tt_end_hour.setDisable(Staff.HOD);
+        tt_end_min.setDisable(Staff.HOD);
 
 
         // SQL stuff
@@ -160,7 +172,7 @@ public class MainController implements Initializable {
             setStatus("Notice body cannot be empty", WARN);
         } else {
 
-            String from = Staff.NAME;
+            int from = Staff.ID;
             String header = header_text.getText();
             String notice = notice_text.getText();
             int to = to_choice.getItems().indexOf(to_choice.getValue());
@@ -177,7 +189,13 @@ public class MainController implements Initializable {
 
     public void viewNoticeHistory() throws IOException {
 
-        new NoticeHistory();
+        new NoticeHistory(true);
+
+    }
+
+    public void viewNoticeMyHistory() throws IOException {
+
+        new NoticeHistory(false);
 
     }
 
@@ -210,7 +228,9 @@ public class MainController implements Initializable {
 
                 // fill choicebox with subjects and set default
                 as_sub_choice.getItems().setAll(as_subject_names);
-                as_sub_choice.setValue(as_subject_names[0]);
+                if (as_subject_names.length > 0) {
+                    as_sub_choice.setValue(as_subject_names[0]);
+                }
 
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -257,29 +277,41 @@ public class MainController implements Initializable {
             int selectedSem = tt_sem_choice.getValue();
 
             // get subjects for selected Sem from database
-            ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sem = " + newValue);
-            int i = 0;
+            ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sem = " + newValue + " AND staff_id = " + Staff.ID);
+            int x = 0;
             try {
                 while (result.next()) {
+                    x++;
+                }
+
+                tt_subject_names = new String[x];
+
+                result.beforeFirst();
+
+                for (int i = 0; result.next(); i++) {
+
                     tt_subject_names[i] = result.getString("full_name");
-                    tt_subject_teachers[i] = result.getString("teacher");
+//                    tt_subject_teachers[i] = result.getString("staff_id");
                     i++;
                 }
+
             } catch (SQLException e) {
-                e.printStackTrace();
+                setStatus(e.getLocalizedMessage(), ERROR);
             }
             // fill choicebox with subjects and set default
             tt_sub_choice.getItems().setAll(tt_subject_names);
-            tt_sub_choice.setValue(tt_subject_names[0]);
+            if (tt_subject_names.length > 0) {
+                tt_sub_choice.setValue(tt_subject_names[0]);
+            }
             // get selected subject index in choicebox and generate subject_id
             int selectedSubIndex = tt_sub_choice.getItems().indexOf(tt_sub_choice.getValue());
             int selectedSubID = ((selectedSem - 1) * 5) + (selectedSubIndex + 1);
 
-            // get seelect day
+            // get select day
             int day = getDayId(tt_day_choice.getValue());
 
             // show subject teacher
-            tt_teacher.setText(tt_subject_teachers[0]);
+            tt_teacher.setText(Staff.NAME);
 
             // setting up time fields but first clear those fields
             tt_start_hour.clear();
@@ -334,7 +366,7 @@ public class MainController implements Initializable {
             int day = getDayId(tt_day_choice.getValue());
 
             // show subject teacher
-            tt_teacher.setText(tt_subject_teachers[selectedSubIndex]);
+            tt_teacher.setText(Staff.NAME);
 
             // setting up time fields but first clear those fields
             tt_start_hour.clear();
