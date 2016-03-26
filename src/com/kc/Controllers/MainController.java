@@ -79,10 +79,23 @@ public class MainController implements Initializable {
     public TextField si_email;
     public Button si_submit;
     public Button si_delete;
+    // Staff stuff
+    public TextField stf_id;
+    public TextField stf_name;
+    public TextField stf_username;
+    public TextField stf_password;
+    public TextField stf_email;
+    public Label stf_lastopen;
+    public Button stf_submit;
+    public Button stf_delete;
+    public CheckBox stf_teaching;
+    public CheckBox stf_HOD;
+
     // Common Stuff
     public Label statusbar_text;
     public FlowPane statusbar;
     private boolean studentPresent = false;
+    private boolean staffPresent = true;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -128,21 +141,16 @@ public class MainController implements Initializable {
         tt_start_hour.textProperty().addListener(textLimiter(tt_maxLength, tt_start_hour));
         tt_start_min.textProperty().addListener(textLimiter(tt_maxLength, tt_start_min));
         // endable only if HOD
-        tt_start_hour.setDisable(Staff.HOD);
-        tt_start_min.setDisable(Staff.HOD);
+        tt_start_hour.setDisable(!Staff.HOD);
+        tt_start_min.setDisable(!Staff.HOD);
         //  end time
         tt_end_ampm_choice.getItems().setAll(AM, PM);
         tt_end_ampm_choice.setValue(AM);
         tt_end_hour.textProperty().addListener(textLimiter(tt_maxLength, tt_end_hour));
         tt_end_min.textProperty().addListener(textLimiter(tt_maxLength, tt_end_min));
         // enable only if HOD
-        tt_end_hour.setDisable(Staff.HOD);
-        tt_end_min.setDisable(Staff.HOD);
-
-
-        // SQL stuff
-        resultRows_choice.getItems().setAll(5, 10, 15, 20, 25, 50);
-        resultRows_choice.setValue(10);
+        tt_end_hour.setDisable(!Staff.HOD);
+        tt_end_min.setDisable(!Staff.HOD);
 
         // Student insert stuff
         si_id.textProperty().addListener(on_si_id_change());
@@ -151,6 +159,27 @@ public class MainController implements Initializable {
         si_active.setSelected(false);
         si_submit.setText("insert");
         si_delete.setDisable(true);
+
+        // Staff stuff
+        stf_id.setText("" + Staff.ID);
+        stf_id.textProperty().addListener(on_stf_id_change());
+        stf_id.setDisable(!Staff.HOD);
+        stf_name.setText(Staff.NAME);
+        stf_name.setDisable(!Staff.HOD);
+        stf_username.setText(Staff.USER_NAME);
+        stf_password.setText(Staff.PASSWORD);
+        stf_email.setText(Staff.EMAIL);
+        stf_lastopen.setText(Staff.LAST_OPEN);
+        stf_submit.setText(Staff.HOD ? "insert" : "update");
+        stf_delete.setDisable(!Staff.HOD);
+        stf_teaching.setSelected(Staff.TEACHING);
+        stf_teaching.setDisable(!Staff.HOD);
+        stf_HOD.setSelected(Staff.HOD);
+        stf_HOD.setDisable(!Staff.HOD);
+
+        // SQL stuff
+        resultRows_choice.getItems().setAll(5, 10, 15, 20, 25, 50);
+        resultRows_choice.setValue(10);
 
 
         statusbar_text.setMaxWidth(600);
@@ -726,6 +755,108 @@ public class MainController implements Initializable {
         }
         setStatus(statusString, err ? ERROR : SUCCESS);
 
+    }
+
+    /**
+     * Staff Stuff
+     */
+    ChangeListener on_stf_id_change() {
+        return (observable, oldValue, newValue) -> {
+
+            String id = stf_id.getText();
+
+            if (id.length() > 2) {
+
+                ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM staff WHERE staff_id = " + id);
+                try {
+                    if (result.first()) {
+                        stf_name.setText(result.getString("name"));
+                        stf_username.setText(result.getString("user_name"));
+                        stf_password.setText(result.getString("password"));
+                        stf_email.setText(result.getString("email"));
+                        staffPresent = true;
+                        stf_delete.setDisable(false);
+                        stf_submit.setText("update");
+                        setStatus("Staff found!", OK);
+                    } else {
+                        stf_name.clear();
+                        stf_username.clear();
+                        stf_password.clear();
+                        stf_email.clear();
+                        staffPresent = false;
+                        stf_delete.setDisable(true);
+                        stf_submit.setText("insert");
+                        setStatus("no Staff found", OK);
+                    }
+                } catch (SQLException e) {
+                    DatabaseHelper.close();
+                    setStatus(e.getLocalizedMessage(), ERROR);
+                }
+
+            } else {
+                staffPresent = false;// i don't why, but ...
+                setStatus("Keep typing...", OK);
+            }
+
+
+        };
+    }
+
+    public void onStfSubmit(ActionEvent actionEvent) {
+        String ID = stf_id.getText();
+        int TEACHING = stf_teaching.isSelected() ? 1 : 0;
+        int HOD = stf_HOD.isSelected() ? 1 : 0;
+        String NAME = "'" + stf_name.getText() + "'";
+        String USER_NAME = "'" + stf_username.getText() + "'";
+        String PASSWORD = "'" + stf_password.getText() + "'";
+        String EMAIL = "'" + stf_email.getText() + "'";
+
+        String query;
+        if (staffPresent) {
+            query = "UPDATE staff " +
+                    "SET teaching = " + TEACHING + "," +
+                    "HOD = " + HOD + "," +
+                    "name = " + NAME + "," +
+                    "user_name = " + USER_NAME + "," +
+                    "password = " + PASSWORD + "," +
+                    "email = " + EMAIL + " " +
+                    "WHERE staff_id = " + ID;
+        } else {
+            query = "INSERT INTO staff(staff_id, name, user_name, password, teaching, HOD, email) " +
+                    "VALUES (" + ID + "," + NAME + "," + USER_NAME + "," + PASSWORD + "," + TEACHING + "," + HOD + "," + EMAIL + ")";
+        }
+
+        String statusString = DatabaseHelper.launchUpdate(query, staffPresent);
+        boolean err = false;
+
+        if (statusString.substring(0, 3).equals("oxo")) {
+            if (staffPresent) {
+                statusString = "updated";
+            } else {
+                statusString = "inserted";
+                staffPresent = true;
+                si_delete.setDisable(false);
+            }
+        } else {
+            err = true;
+        }
+
+        setStatus(statusString, err ? ERROR : SUCCESS);
+        System.out.println(staffPresent ? "update" : "insert");
+    }
+
+    public void onStfdelete(ActionEvent actionEvent) {
+        String statusString = DatabaseHelper.launchUpdate("DELETE FROM staff WHERE staff_id = " + si_id.getText(), false);
+        boolean err = false;
+        if (statusString.substring(0, 3).equals("oxo")) {
+            statusString = "Deleted!\nPress insert if deleted by mistake. NOTE: foreign key references can't be restored";
+            si_submit.setText("insert");
+            staffPresent = false;
+            si_delete.setDisable(true);
+        } else {
+            err = true;
+        }
+        setStatus(statusString, err ? ERROR : SUCCESS);
     }
 
     /**

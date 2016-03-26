@@ -68,11 +68,13 @@ public class LoginController implements Initializable {
 
                 try {
                     Staff.HOD = result.getBoolean("HOD");
+                    Staff.TEACHING = result.getBoolean("teaching");
                     Staff.ID = result.getInt("staff_id");
                     Staff.USER_NAME = result.getString("user_name");
                     Staff.NAME = result.getString("name");
                     Staff.LAST_OPEN = result.getString("last_open");
-
+                    Staff.PASSWORD = result.getString("password");
+                    Staff.EMAIL = result.getString("email");
                     KC.loadApp();
 
 

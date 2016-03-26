@@ -156,7 +156,7 @@
                         </GridPane>
                     </content>
                 </Tab>
-                <Tab text="Insert Student">
+                <Tab text="Student">
                     <content>
                         <GridPane vgap="5.0">
                             <columnConstraints>
@@ -166,8 +166,10 @@
                             <rowConstraints>
                                 <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
                                 <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
-                        <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0"
+                                                vgrow="SOMETIMES"/>
+                                <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0"
+                                                vgrow="SOMETIMES"/>
                                 <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
                                 <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
                                 <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
@@ -203,6 +205,72 @@
                                         <Insets left="415.0"/>
                                     </GridPane.margin>
                                 </Button>
+                            </children>
+                            <padding>
+                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+                            </padding>
+                        </GridPane>
+                    </content>
+                </Tab>
+                <Tab text="Staff">
+                    <content>
+                        <GridPane vgap="5.0">
+                            <columnConstraints>
+                                <ColumnConstraints fillWidth="false" minWidth="10.0" percentWidth="20.0"/>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                            </columnConstraints>
+                            <rowConstraints>
+                                <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
+                                <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
+                                <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
+                                <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
+                        <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0"
+                                                vgrow="SOMETIMES"/>
+                                <RowConstraints minHeight="10.0" percentHeight="0.0" prefHeight="30.0"
+                                                vgrow="SOMETIMES"/>
+                                <RowConstraints percentHeight="0.0" vgrow="SOMETIMES"/>
+                            </rowConstraints>
+                            <children>
+                                <Label text="ID"/>
+                                <Label text="Name" GridPane.rowIndex="1"/>
+                                <Button fx:id="stf_submit" defaultButton="true" mnemonicParsing="false"
+                                        onAction="#onStfSubmit" text="submit" GridPane.columnSpan="2"
+                                        GridPane.rowIndex="8"/>
+                                <Label text="user_name" GridPane.rowIndex="2"/>
+                                <Label text="password" GridPane.rowIndex="3"/>
+                                <TextField fx:id="stf_id" maxHeight="-Infinity" maxWidth="300.0" minHeight="-Infinity"
+                                           minWidth="-Infinity" GridPane.columnIndex="1"/>
+                                <TextField fx:id="stf_username" layoutX="136.0" layoutY="20.0" maxHeight="-Infinity"
+                                           maxWidth="300.0" minHeight="-Infinity" minWidth="-Infinity"
+                                           GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                <TextField fx:id="stf_name" layoutX="136.0" layoutY="20.0" maxHeight="-Infinity"
+                                           maxWidth="300.0" minHeight="-Infinity" minWidth="-Infinity"
+                                           GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <TextField fx:id="stf_password" layoutX="136.0" layoutY="50.0" maxHeight="-Infinity"
+                                           maxWidth="300.0" minHeight="-Infinity" minWidth="-Infinity"
+                                           GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <Button fx:id="stf_delete" defaultButton="true" mnemonicParsing="false"
+                                        onAction="#onStfdelete" style="-fx-background-color: #f18b8b;" text="delete"
+                                        textFill="#a10202" GridPane.columnIndex="1" GridPane.rowIndex="8">
+                                    <GridPane.margin>
+                                        <Insets left="415.0"/>
+                                    </GridPane.margin>
+                                </Button>
+                                <Label text="Email" GridPane.rowIndex="4"/>
+                                <TextField fx:id="stf_email" maxHeight="-Infinity" maxWidth="300.0"
+                                           minHeight="-Infinity" minWidth="-Infinity" GridPane.columnIndex="1"
+                                           GridPane.rowIndex="4"/>
+                                <Label text="Last open" GridPane.rowIndex="7"/>
+                                <Label fx:id="stf_lastopen" text="00:00" GridPane.columnIndex="1"
+                                       GridPane.rowIndex="7"/>
+                                <Label text="Teaching" GridPane.rowIndex="5"/>
+                                <CheckBox fx:id="stf_teaching" mnemonicParsing="false" GridPane.columnIndex="1"
+                                          GridPane.rowIndex="5"/>
+                                <CheckBox fx:id="stf_HOD" mnemonicParsing="false" GridPane.columnIndex="1"
+                                          GridPane.rowIndex="6"/>
+                                <Label text="HOD" GridPane.rowIndex="6"/>
                             </children>
                             <padding>
                                 <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
