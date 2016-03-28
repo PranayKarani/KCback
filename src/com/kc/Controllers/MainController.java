@@ -7,6 +7,7 @@ import com.kc.entity.Staff;
 import com.kc.windows.AttendanceSheet;
 import com.kc.windows.NoticeHistory;
 import com.kc.windows.SQLResults;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
@@ -90,6 +91,16 @@ public class MainController implements Initializable {
     public Button stf_delete;
     public CheckBox stf_teaching;
     public CheckBox stf_HOD;
+    // Subject Stuff
+    public TextField sub_id;
+    public TextField sub_full_name;
+    public TextField sub_short_name;
+    public ChoiceBox<Integer> sub_sem;
+    public TextField sub_staff_id;
+    public Label sub_staff_name;
+    public Button sub_submit;
+    public Button sub_delete;
+
 
     // Common Stuff
     public Label statusbar_text;
@@ -177,6 +188,21 @@ public class MainController implements Initializable {
         stf_HOD.setSelected(Staff.HOD);
         stf_HOD.setDisable(!Staff.HOD);
 
+        // Subject Stuff
+        sub_id.textProperty().addListener(on_sub_id_change());
+        sub_id.setDisable(!Staff.HOD);
+        sub_full_name.setDisable(!Staff.HOD);
+        sub_short_name.setDisable(!Staff.HOD);
+        sub_sem.getItems().setAll(1, 2, 3, 4, 5, 6);
+        sub_sem.setValue(1);
+        sub_sem.setDisable(!Staff.HOD);
+        sub_staff_name.setText("");
+        sub_staff_id.textProperty().addListener(on_sub_staff_id_change());
+        sub_staff_id.setDisable(!Staff.HOD);
+        sub_submit.setDisable(!Staff.HOD);
+        sub_delete.setDisable(!Staff.HOD);
+
+
         // SQL stuff
         resultRows_choice.getItems().setAll(5, 10, 15, 20, 25, 50);
         resultRows_choice.setValue(10);
@@ -191,7 +217,7 @@ public class MainController implements Initializable {
      * Send Notice tab
      */
 
-    public void onSendNoticeClick() throws IOException {
+    public void onSendNoticeClick() {
 
         if (from_text.getText().isEmpty()) {
             setStatus("\"From\" field cannot be empty", WARN);
@@ -201,17 +227,23 @@ public class MainController implements Initializable {
             setStatus("Notice body cannot be empty", WARN);
         } else {
 
-            int from = Staff.ID;
-            String header = header_text.getText();
-            String notice = notice_text.getText();
-            int to = to_choice.getItems().indexOf(to_choice.getValue());
+            setStatus("Sending...", OK);
+            new Thread(() -> {
+                int from = Staff.ID;
+                String header = header_text.getText();
+                String notice = notice_text.getText();
+                int to = to_choice.getItems().indexOf(to_choice.getValue());
 
-            // todo thread this operation
-            RemoteDatabaseConnecter rdc = new RemoteDatabaseConnecter("POST", C.SEND_NOTICE)
-                    .connect("from=" + from + "&header=" + header + "&to=" + to + "&message=" + notice);
-            System.out.println(rdc.rawData);
+                RemoteDatabaseConnecter rdc = null;
+                try {
+                    rdc = new RemoteDatabaseConnecter("POST", C.SEND_NOTICE).connect("from=" + from + "&header=" + header + "&to=" + to + "&message=" + notice);
+                    System.out.println(rdc.rawData);
+                    Platform.runLater(() -> setStatus("Notice sent succesfully!", SUCCESS));
+                } catch (IOException e) {
+                    Platform.runLater(() -> setStatus("Something went wrong\n" + e.getLocalizedMessage(), ERROR));
+                }
 
-            setStatus("Notice sent succesfully!", SUCCESS);
+            }).start();
         }
 
     }
@@ -857,6 +889,140 @@ public class MainController implements Initializable {
             err = true;
         }
         setStatus(statusString, err ? ERROR : SUCCESS);
+    }
+
+
+    /**
+     * Subject Stuff
+     */
+    ChangeListener on_sub_id_change() {
+        return (observable, oldValue, newValue) -> {
+
+            String id = sub_id.getText();
+
+            if (!id.equals("")) {
+
+
+                ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sub_ID = " + id);
+                try {
+                    if (result.first()) {
+                        sub_full_name.setText(result.getString("full_name"));
+                        sub_short_name.setText(result.getString("short_name"));
+                        sub_sem.setValue(result.getInt("sem"));
+
+                        // Staff id
+                        int staff_id = result.getInt("staff_id");
+                        ResultSet result2 = DatabaseHelper.launchQuery("SELECT * FROM staff WHERE staff_id = " + staff_id);
+                        sub_staff_id.setText("" + staff_id);
+                        if (result2.first()) {
+                            sub_staff_name.setText(result2.getString("name"));
+                        }
+
+                        sub_delete.setDisable(false);
+                        sub_submit.setText("update");
+                        setStatus("Subject found!", OK);
+                    } else {
+                        sub_full_name.clear();
+                        sub_short_name.clear();
+                        sub_staff_id.clear();
+                        sub_staff_name.setText("");
+                        sub_delete.setDisable(true);
+                        sub_submit.setText("insert");
+                        setStatus("no Subject found", OK);
+                    }
+                } catch (SQLException e) {
+                    DatabaseHelper.close();
+                    setStatus(e.getLocalizedMessage(), ERROR);
+                }
+            } else {
+                sub_full_name.clear();
+                sub_short_name.clear();
+                sub_staff_id.clear();
+                sub_staff_name.setText("");
+                sub_delete.setDisable(true);
+                sub_submit.setText("insert");
+                setStatus("no Subject found", OK);
+            }
+
+        };
+    }
+
+    public void onSubSubmit(ActionEvent actionEvent) {
+        String ID = sub_id.getText();
+        String FULL_NAME = "'" + sub_full_name.getText() + "'";
+        String SHORT_NAME = "'" + sub_short_name.getText() + "'";
+        int SEM = sub_sem.getValue();
+        String STAFF_ID = sub_staff_id.getText();
+
+
+        String query;
+        if (staffPresent) {
+            query = "UPDATE subject " +
+                    "SET sub_ID = " + ID + "," +
+                    "full_name = " + FULL_NAME + "," +
+                    "short_name = " + SHORT_NAME + "," +
+                    "sem = " + SEM + "," +
+                    "staff_id = " + STAFF_ID + " " +
+                    "WHERE sub_ID = " + ID;
+        } else {
+            query = "INSERT INTO subject(sub_ID, full_name, short_name, sem, staff_id) " +
+                    "VALUES (" + ID + "," + FULL_NAME + "," + SHORT_NAME + "," + SEM + "," + STAFF_ID + ")";
+        }
+
+        String statusString = DatabaseHelper.launchUpdate(query, staffPresent);
+        boolean err = false;
+
+        if (statusString.substring(0, 3).equals("oxo")) {
+            if (staffPresent) {
+                statusString = "updated subject";
+            } else {
+                statusString = "inserted subject";
+                staffPresent = true;
+                si_delete.setDisable(false);
+            }
+        } else {
+            err = true;
+        }
+
+        setStatus(statusString, err ? ERROR : SUCCESS);
+        System.out.println(staffPresent ? "update" : "insert");
+    }
+
+    public void onSubdelete(ActionEvent actionEvent) {
+        String statusString = DatabaseHelper.launchUpdate("DELETE FROM subject WHERE sub_ID = " + sub_id.getText(), false);
+        boolean err = false;
+        if (statusString.substring(0, 3).equals("oxo")) {
+            statusString = "Deleted!\nPress insert if deleted by mistake. NOTE: foreign key references can't be restored";
+            si_submit.setText("insert");
+            staffPresent = false;
+            si_delete.setDisable(true);
+        } else {
+            err = true;
+        }
+        setStatus(statusString, err ? ERROR : SUCCESS);
+    }
+
+    ChangeListener on_sub_staff_id_change() {
+        return (observable, oldValue, newValue) -> {
+
+            // Staff id
+            String staff_id = sub_staff_id.getText();
+            if (staff_id.length() > 2) {
+
+                ResultSet result2 = DatabaseHelper.launchQuery("SELECT * FROM staff WHERE staff_id = " + staff_id);
+                try {
+                    if (result2.first()) {
+                        sub_staff_name.setText(result2.getString("name"));
+                        setStatus("Staff found", OK);
+                    } else {
+                        setStatus("No staff found with ID: " + staff_id, WARN);
+                    }
+                } catch (SQLException e) {
+                    setStatus(e.getLocalizedMessage(), ERROR);
+                }
+            }
+
+        };
     }
 
     /**
