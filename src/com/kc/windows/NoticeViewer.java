@@ -1,7 +1,7 @@
 package com.kc.windows; // 22 Mar, 10:42 AM
 
-import com.kc.entity.Notice;
 import com.kc.Utilities.DatabaseHelper;
+import com.kc.entity.Notice;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -37,7 +37,9 @@ public class NoticeViewer {
 
         String query = "SELECT * FROM notice WHERE id = " + id;
 
-        ResultSet resultSet = DatabaseHelper.launchQuery(query);
+        DatabaseHelper dbh = new DatabaseHelper();
+        dbh.launchQuery(query);
+        ResultSet resultSet = dbh.resultSet;
         //
         headerLabel = new Label("");
         headerLabel.setWrapText(true);
@@ -78,6 +80,8 @@ public class NoticeViewer {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            dbh.close();
         }
 
         Stage window = new Stage();

@@ -10,29 +10,21 @@ import static com.kc.Utilities.C.*;
 
 public class DatabaseHelper {
 
-    /**
-     * <p>Ask a query and get the result in the form of cursor.</p>
-     *
-     * @param query
-     * @return
-     * @throws SQLException
-     */
-    static Connection connection = null;
-    static Statement statement = null;
 
-    public static ResultSet launchQuery(final String query) {
+    public Connection connection;
+    public Statement statement;
+    public ResultSet resultSet;
+    public String result;
+
+    public void launchQuery(final String query) {
 
         try {
             Class.forName("com.mysql.jdbc.Driver");
             connection = DriverManager.getConnection(JDBC_CON, JDBC_USER, JDBC_PASS);
             statement = connection.createStatement();
-            return statement.executeQuery(query);// return resultset
-        } catch (SQLException e) {
+            resultSet = statement.executeQuery(query);// return resultset
+        } catch (SQLException | ClassNotFoundException e) {
             C.SQL_RESULT = e.getLocalizedMessage();
-            return null;
-        } catch (ClassNotFoundException e) {
-            C.SQL_RESULT = e.getLocalizedMessage();
-            return null;
         }
     }
 
@@ -43,7 +35,10 @@ public class DatabaseHelper {
      * @param update - update or insert?
      * @return
      */
-    public static String launchUpdate(final String query, boolean update) {
+    public String launchUpdate(final String query, boolean update) {
+
+        Connection connection = null;
+        Statement statement = null;
 
         try {
             Class.forName("com.mysql.jdbc.Driver");
@@ -63,17 +58,45 @@ public class DatabaseHelper {
             return e.getLocalizedMessage();
         } catch (ClassNotFoundException e) {
             return e.getLocalizedMessage();
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (statement != null) {
+                try {
+                    statement.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
-    public static void close() {
-        try {
-
-            if (statement != null) statement.close();
-            if (connection != null) connection.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public void close() {
+        if (resultSet != null) {
+            try {
+                resultSet.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        if (statement != null) {
+            try {
+                statement.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 

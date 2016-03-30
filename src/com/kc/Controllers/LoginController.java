@@ -61,7 +61,9 @@ public class LoginController implements Initializable {
                         "password = " + password;
             }
 
-            ResultSet result = DatabaseHelper.launchQuery(query);
+            DatabaseHelper dbh = new DatabaseHelper();
+            dbh.launchQuery(query);
+            ResultSet result = dbh.resultSet;
 
             try {
                 if (result.first()) {

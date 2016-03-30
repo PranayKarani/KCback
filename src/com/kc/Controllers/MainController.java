@@ -114,7 +114,9 @@ public class MainController implements Initializable {
         String last_open = "You last login was at " + (Staff.LAST_OPEN == null ? "-" : Staff.LAST_OPEN);
         setStatus(last_open, WARN);
         String timestamp = "'" + LocalDateTime.now() + "'";
-        String resultSet = DatabaseHelper.launchUpdate("UPDATE staff SET last_open = " + timestamp + " WHERE staff_id = " + Staff.ID, true);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String resultSet = dbh.launchUpdate("UPDATE staff SET last_open = " + timestamp + " WHERE staff_id = " + Staff.ID, true);
+        dbh.close();
 
         // Notice stuff
         from_text.setText("From: " + Staff.NAME);
@@ -126,29 +128,23 @@ public class MainController implements Initializable {
 
         as_sem_choice.setDisable(Staff.HOD);
         as_sem_choice.getItems().setAll(1, 2, 3, 4, 5, 6);
-        as_sem_choice.getSelectionModel().selectedItemProperty()
-                .addListener(on_as_sem_change());
-//        as_subject_names = new String[5];
+        as_sem_choice.getSelectionModel().selectedItemProperty().addListener(on_as_sem_change());
         as_datePicker.setValue(LocalDate.now());
 
 
         // Time Table
 
         tt_sem_choice.getItems().setAll(1, 2, 3, 4, 5, 6);
-        tt_sem_choice.getSelectionModel().selectedItemProperty()
-                .addListener(on_tt_sem_change());
-//        tt_subject_names = new String[5];
-//        tt_subject_teachers = new String[5];
+        tt_sem_choice.getSelectionModel().selectedItemProperty().addListener(on_tt_sem_change());
         tt_teacher.setDisable(!Staff.HOD);
-        tt_sub_choice.getSelectionModel().selectedItemProperty()
-                .addListener(on_tt_sub_change());
+        tt_sub_choice.getSelectionModel().selectedItemProperty().addListener(on_tt_sub_change());
         tt_day_choice.getItems().setAll(MON, TUE, WED, THR, FRI, SAT);
         tt_day_choice.setValue(MON);
-        tt_day_choice.getSelectionModel().selectedItemProperty()
-                .addListener(on_tt_day_change());
+        tt_day_choice.getSelectionModel().selectedItemProperty().addListener(on_tt_day_change());
         // start time
         tt_start_ampm_choice.getItems().setAll(AM, PM);
         tt_start_ampm_choice.setValue(AM);
+        tt_start_ampm_choice.setDisable(!Staff.HOD);
         tt_start_hour.textProperty().addListener(textLimiter(tt_maxLength, tt_start_hour));
         tt_start_min.textProperty().addListener(textLimiter(tt_maxLength, tt_start_min));
         // endable only if HOD
@@ -157,6 +153,7 @@ public class MainController implements Initializable {
         //  end time
         tt_end_ampm_choice.getItems().setAll(AM, PM);
         tt_end_ampm_choice.setValue(AM);
+        tt_end_ampm_choice.setDisable(!Staff.HOD);
         tt_end_hour.textProperty().addListener(textLimiter(tt_maxLength, tt_end_hour));
         tt_end_min.textProperty().addListener(textLimiter(tt_maxLength, tt_end_min));
         // enable only if HOD
@@ -270,7 +267,9 @@ public class MainController implements Initializable {
             int selectedSem = as_sem_choice.getValue();
 
             // get subjects for selected Sem from database
-            ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sem = " + newValue + " AND staff_id = " + Staff.ID);
+            DatabaseHelper dbh = new DatabaseHelper();
+            dbh.launchQuery("SELECT * FROM subject WHERE sem = " + newValue + " AND staff_id = " + Staff.ID);
+            ResultSet result = dbh.resultSet;
             int i = 0;
             try {
 
@@ -295,6 +294,8 @@ public class MainController implements Initializable {
 
             } catch (SQLException e) {
                 e.printStackTrace();
+            } finally {
+                dbh.close();
             }
 
         };
@@ -316,12 +317,31 @@ public class MainController implements Initializable {
                 setStatus("Select required subject", WARN);
             } else {
 
-                selectedSubject = as_sub_choice.getValue();
+                int selectedSubID = 0;
 
-                int selectedSubIndex = as_sub_choice.getItems().indexOf(selectedSubject);
-                int selectedSubID = ((selectedSem - 1) * 5) + (selectedSubIndex + 1);
+                selectedSubject = "'" + as_sub_choice.getValue() + "'";
+                DatabaseHelper dbh = new DatabaseHelper();
+                dbh.launchQuery("SELECT * FROM subject WHERE full_name = " + selectedSubject);
+                ResultSet resultSet = dbh.resultSet;
+                try {
+                    if (resultSet.first()) {
+                        selectedSubID = resultSet.getInt("sub_ID");
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                } finally {
+                    dbh.close();
+                }
                 LocalDate localDate = as_datePicker.getValue();
-                new AttendanceSheet(selectedSem, selectedSubID, selectedSubject, localDate);
+                final int finalSelectedSubID = selectedSubID;
+                new Thread(() -> {
+                    try {
+                        Platform.runLater(() -> setStatus("Loading Attendance sheet, wait a second...", OK));
+                        new AttendanceSheet(selectedSem, finalSelectedSubID, selectedSubject, localDate);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
                 setStatus("", OK);
             }
         }
@@ -338,7 +358,9 @@ public class MainController implements Initializable {
             int selectedSem = tt_sem_choice.getValue();
 
             // get subjects for selected Sem from database
-            ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sem = " + newValue + " AND staff_id = " + Staff.ID);
+            DatabaseHelper dbh = new DatabaseHelper();
+            dbh.launchQuery("SELECT * FROM subject WHERE sem = " + newValue + " AND staff_id = " + Staff.ID);
+            ResultSet result = dbh.resultSet;
             int x = 0;
             try {
                 while (result.next()) {
@@ -358,7 +380,11 @@ public class MainController implements Initializable {
 
             } catch (SQLException e) {
                 setStatus(e.getLocalizedMessage(), ERROR);
+            } finally {
+                dbh.close();
             }
+
+
             // fill choicebox with subjects and set default
             tt_sub_choice.getItems().setAll(tt_subject_names);
             if (tt_subject_names.length > 0) {
@@ -380,7 +406,9 @@ public class MainController implements Initializable {
             tt_end_hour.clear();
             tt_end_min.clear();
             // query timings from database
-            ResultSet time_result = DatabaseHelper.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + day);
+            dbh = new DatabaseHelper();
+            dbh.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + day);
+            ResultSet time_result = dbh.resultSet;
             LocalTime startTime, endTime;
             try {
                 while (time_result.next()) {
@@ -409,6 +437,8 @@ public class MainController implements Initializable {
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
+            } finally {
+                dbh.close();
             }
 
         };
@@ -435,7 +465,9 @@ public class MainController implements Initializable {
             tt_end_hour.clear();
             tt_end_min.clear();
             // query timings from database
-            ResultSet time_result = DatabaseHelper.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + day);
+            DatabaseHelper dbh = new DatabaseHelper();
+            dbh.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + day);
+            ResultSet time_result = dbh.resultSet;
             LocalTime startTime, endTime;
             try {
                 while (time_result.next()) {
@@ -464,6 +496,8 @@ public class MainController implements Initializable {
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
+            } finally {
+                dbh.close();
             }
         };
     }
@@ -486,7 +520,9 @@ public class MainController implements Initializable {
             tt_end_hour.clear();
             tt_end_min.clear();
             // query timings from database
-            ResultSet time_result = DatabaseHelper.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + day);
+            DatabaseHelper dbh = new DatabaseHelper();
+            dbh.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + day);
+            ResultSet time_result = dbh.resultSet;
             LocalTime startTime, endTime;
             try {
                 while (time_result.next()) {
@@ -515,6 +551,8 @@ public class MainController implements Initializable {
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
+            } finally {
+                dbh.close();
             }
         };
     }
@@ -615,15 +653,17 @@ public class MainController implements Initializable {
             String startTimeForQuery = "'" + timeFormat_24(startTime_h, startTime_m, tt_start_ampm_choice.getValue()) + "'";
             String endTimeForQuery = "'" + timeFormat_24(endTime_h, endTime_m, tt_end_ampm_choice.getValue()) + "'";
 
-            ResultSet result = DatabaseHelper
-                    .launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + dayID);
+            DatabaseHelper dbh = new DatabaseHelper();
+            dbh.launchQuery("SELECT * FROM timetable WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + dayID);
+            ResultSet result = dbh.resultSet;
             String statusString = "";
             boolean err = false;
             try {
                 // if result is present get the first one, else insert new
                 if (result.first()) {
                     // update
-                    String r = DatabaseHelper.launchUpdate(
+                    DatabaseHelper dbh2 = new DatabaseHelper();
+                    String r = dbh2.launchUpdate(
                             "UPDATE timetable " +
                                     " SET start_time = " + startTimeForQuery + ", end_time = " + endTimeForQuery + ", teacher = " + insertTeacher +
                                     " WHERE sub_ID = " + selectedSubID + " AND day_of_week = " + dayID,
@@ -640,9 +680,11 @@ public class MainController implements Initializable {
                         err = true;
                     }
 
+                    dbh2.close();
                 } else {
                     // insert
-                    String r = DatabaseHelper.launchUpdate(
+                    DatabaseHelper dbh2 = new DatabaseHelper();
+                    String r = dbh2.launchUpdate(
                             "INSERT INTO timetable(sub_ID, day_of_week, start_time, end_time, teacher)" +
                                     "VALUES (" + selectedSubID + "," + dayID + "," + startTimeForQuery + "," + endTimeForQuery + "," + insertTeacher + ")",
                             false);
@@ -657,10 +699,13 @@ public class MainController implements Initializable {
                         statusString = r;
                         err = true;
                     }
+                    dbh2.close();
                 }
 
             } catch (SQLException e) {
                 setStatus(e.getLocalizedMessage(), ERROR);
+            } finally {
+                dbh.close();
             }
 
             setStatus(statusString, err ? ERROR : SUCCESS);
@@ -694,7 +739,9 @@ public class MainController implements Initializable {
 
             if (id.length() > 3) {
 
-                ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM student WHERE student_id = " + id);
+                DatabaseHelper dbh = new DatabaseHelper();
+                dbh.launchQuery("SELECT * FROM student WHERE student_id = " + id);
+                ResultSet result = dbh.resultSet;
                 try {
                     if (result.first()) {
                         si_name.setText(result.getString("name"));
@@ -717,8 +764,9 @@ public class MainController implements Initializable {
                         setStatus("no student found", OK);
                     }
                 } catch (SQLException e) {
-                    DatabaseHelper.close();
                     setStatus(e.getLocalizedMessage(), ERROR);
+                } finally {
+                    dbh.close();
                 }
 
             } else {
@@ -753,7 +801,8 @@ public class MainController implements Initializable {
                     "VALUES (" + ID + "," + ACTIVE + "," + SEM + "," + ROLL_NO + "," + NAME + "," + EMAIL + ")";
         }
 
-        String statusString = DatabaseHelper.launchUpdate(query, studentPresent);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String statusString = dbh.launchUpdate(query, studentPresent);
         boolean err = false;
 
         if (statusString.substring(0, 3).equals("oxo")) {
@@ -767,6 +816,7 @@ public class MainController implements Initializable {
         } else {
             err = true;
         }
+        dbh.close();
 
         setStatus(statusString, err ? ERROR : SUCCESS);
         System.out.println(studentPresent ? "update" : "insert");
@@ -775,7 +825,8 @@ public class MainController implements Initializable {
 
     public void onSIdelete(ActionEvent actionEvent) {
 
-        String statusString = DatabaseHelper.launchUpdate("DELETE FROM student WHERE student_id = " + si_id.getText(), false);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String statusString = dbh.launchUpdate("DELETE FROM student WHERE student_id = " + si_id.getText(), false);
         boolean err = false;
         if (statusString.substring(0, 3).equals("oxo")) {
             statusString = "Deleted!\nPress insert if deleted by mistake. NOTE: foreign key references can't be restored";
@@ -785,6 +836,7 @@ public class MainController implements Initializable {
         } else {
             err = true;
         }
+        dbh.close();
         setStatus(statusString, err ? ERROR : SUCCESS);
 
     }
@@ -799,7 +851,9 @@ public class MainController implements Initializable {
 
             if (id.length() > 2) {
 
-                ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM staff WHERE staff_id = " + id);
+                DatabaseHelper dbh = new DatabaseHelper();
+                dbh.launchQuery("SELECT * FROM staff WHERE staff_id = " + id);
+                ResultSet result = dbh.resultSet;
                 try {
                     if (result.first()) {
                         stf_name.setText(result.getString("name"));
@@ -821,8 +875,9 @@ public class MainController implements Initializable {
                         setStatus("no Staff found", OK);
                     }
                 } catch (SQLException e) {
-                    DatabaseHelper.close();
                     setStatus(e.getLocalizedMessage(), ERROR);
+                } finally {
+                    dbh.close();
                 }
 
             } else {
@@ -858,7 +913,8 @@ public class MainController implements Initializable {
                     "VALUES (" + ID + "," + NAME + "," + USER_NAME + "," + PASSWORD + "," + TEACHING + "," + HOD + "," + EMAIL + ")";
         }
 
-        String statusString = DatabaseHelper.launchUpdate(query, staffPresent);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String statusString = dbh.launchUpdate(query, staffPresent);
         boolean err = false;
 
         if (statusString.substring(0, 3).equals("oxo")) {
@@ -872,13 +928,14 @@ public class MainController implements Initializable {
         } else {
             err = true;
         }
-
+        dbh.close();
         setStatus(statusString, err ? ERROR : SUCCESS);
         System.out.println(staffPresent ? "update" : "insert");
     }
 
     public void onStfdelete(ActionEvent actionEvent) {
-        String statusString = DatabaseHelper.launchUpdate("DELETE FROM staff WHERE staff_id = " + si_id.getText(), false);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String statusString = dbh.launchUpdate("DELETE FROM staff WHERE staff_id = " + si_id.getText(), false);
         boolean err = false;
         if (statusString.substring(0, 3).equals("oxo")) {
             statusString = "Deleted!\nPress insert if deleted by mistake. NOTE: foreign key references can't be restored";
@@ -888,6 +945,7 @@ public class MainController implements Initializable {
         } else {
             err = true;
         }
+        dbh.close();
         setStatus(statusString, err ? ERROR : SUCCESS);
     }
 
@@ -902,8 +960,9 @@ public class MainController implements Initializable {
 
             if (!id.equals("")) {
 
-
-                ResultSet result = DatabaseHelper.launchQuery("SELECT * FROM subject WHERE sub_ID = " + id);
+                DatabaseHelper dbh = new DatabaseHelper();
+                dbh.launchQuery("SELECT * FROM subject WHERE sub_ID = " + id);
+                ResultSet result = dbh.resultSet;
                 try {
                     if (result.first()) {
                         sub_full_name.setText(result.getString("full_name"));
@@ -912,7 +971,10 @@ public class MainController implements Initializable {
 
                         // Staff id
                         int staff_id = result.getInt("staff_id");
-                        ResultSet result2 = DatabaseHelper.launchQuery("SELECT * FROM staff WHERE staff_id = " + staff_id);
+                        DatabaseHelper dbh2 = new DatabaseHelper();
+                        dbh2.launchQuery("SELECT * FROM staff WHERE staff_id = " + staff_id);
+                        ResultSet result2 = dbh2.resultSet;
+
                         sub_staff_id.setText("" + staff_id);
                         if (result2.first()) {
                             sub_staff_name.setText(result2.getString("name"));
@@ -931,8 +993,9 @@ public class MainController implements Initializable {
                         setStatus("no Subject found", OK);
                     }
                 } catch (SQLException e) {
-                    DatabaseHelper.close();
                     setStatus(e.getLocalizedMessage(), ERROR);
+                } finally {
+                    dbh.close();
                 }
             } else {
                 sub_full_name.clear();
@@ -969,7 +1032,8 @@ public class MainController implements Initializable {
                     "VALUES (" + ID + "," + FULL_NAME + "," + SHORT_NAME + "," + SEM + "," + STAFF_ID + ")";
         }
 
-        String statusString = DatabaseHelper.launchUpdate(query, staffPresent);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String statusString = dbh.launchUpdate(query, staffPresent);
         boolean err = false;
 
         if (statusString.substring(0, 3).equals("oxo")) {
@@ -983,13 +1047,14 @@ public class MainController implements Initializable {
         } else {
             err = true;
         }
-
+        dbh.close();
         setStatus(statusString, err ? ERROR : SUCCESS);
         System.out.println(staffPresent ? "update" : "insert");
     }
 
     public void onSubdelete(ActionEvent actionEvent) {
-        String statusString = DatabaseHelper.launchUpdate("DELETE FROM subject WHERE sub_ID = " + sub_id.getText(), false);
+        DatabaseHelper dbh = new DatabaseHelper();
+        String statusString = dbh.launchUpdate("DELETE FROM subject WHERE sub_ID = " + sub_id.getText(), false);
         boolean err = false;
         if (statusString.substring(0, 3).equals("oxo")) {
             statusString = "Deleted!\nPress insert if deleted by mistake. NOTE: foreign key references can't be restored";
@@ -999,6 +1064,7 @@ public class MainController implements Initializable {
         } else {
             err = true;
         }
+        dbh.close();
         setStatus(statusString, err ? ERROR : SUCCESS);
     }
 
@@ -1009,7 +1075,9 @@ public class MainController implements Initializable {
             String staff_id = sub_staff_id.getText();
             if (staff_id.length() > 2) {
 
-                ResultSet result2 = DatabaseHelper.launchQuery("SELECT * FROM staff WHERE staff_id = " + staff_id);
+                DatabaseHelper dbh = new DatabaseHelper();
+                dbh.launchQuery("SELECT * FROM staff WHERE staff_id = " + staff_id);
+                ResultSet result2 = dbh.resultSet;
                 try {
                     if (result2.first()) {
                         sub_staff_name.setText(result2.getString("name"));
@@ -1019,6 +1087,8 @@ public class MainController implements Initializable {
                     }
                 } catch (SQLException e) {
                     setStatus(e.getLocalizedMessage(), ERROR);
+                } finally {
+                    dbh.close();
                 }
             }
 

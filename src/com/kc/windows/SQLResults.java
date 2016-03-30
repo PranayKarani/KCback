@@ -33,10 +33,10 @@ import static com.kc.Controllers.MainController.*;
  */
 public class SQLResults {
 
-    final int SELECT  = 0;
-    final int INSERT  = 1;
-    final int UPDATE  = 2;
-    final int DELETE  = 3;
+    final int SELECT = 0;
+    final int INSERT = 1;
+    final int UPDATE = 2;
+    final int DELETE = 3;
     final int INVALID = -1;
     String query;
     int noofRows;
@@ -44,13 +44,13 @@ public class SQLResults {
     // query type;
     int TYPE;
     // UI stuff
-    BorderPane              mainLayout;
-    VBox                    box;
+    BorderPane mainLayout;
+    VBox box;
     TableView table;
     ObservableList<ObservableList> rows;
 
     FlowPane statusBar;
-    Label    status;
+    Label status;
 
     public SQLResults(String query, int noofRows) {
         this.query = query;
@@ -86,8 +86,10 @@ public class SQLResults {
 
         switch (TYPE) {
             case SELECT:
+                DatabaseHelper dbh = new DatabaseHelper();
                 try {
-                    cursor = DatabaseHelper.launchQuery(limitQuery(query));
+                    dbh.launchQuery(limitQuery(query));
+                    cursor = dbh.resultSet;
                     if (cursor == null) {
                         setStatus(C.SQL_RESULT, ERROR);
                         break;
@@ -100,7 +102,7 @@ public class SQLResults {
 
                         TableColumn col = new TableColumn<>(cursor.getMetaData().getColumnName(i + 1));
                         col.setSortable(false);
-                        col.setMinWidth(cursor.getMetaData().getColumnName(i + 1).length()*7);
+                        col.setMinWidth(cursor.getMetaData().getColumnName(i + 1).length() * 7);
                         final int finalI = i;
                         col.setCellValueFactory(new Callback<CellDataFeatures<ObservableList, String>, ObservableValue<String>>() {
                             @Override
@@ -138,47 +140,53 @@ public class SQLResults {
 
                 } catch (SQLException e) {
                     setStatus(e.getLocalizedMessage(), ERROR);
+                } finally {
+                    dbh.close();
                 }
 
                 break;
             case UPDATE:
 
-                result = DatabaseHelper.launchUpdate(query, false);
-                if(result.substring(0,3).equals("oxo")) {
+                DatabaseHelper dbh2 = new DatabaseHelper();
+                result = dbh2.launchUpdate(query, false);
+                if (result.substring(0, 3).equals("oxo")) {
                     setStatus("Updated " + result.substring(3) + " rows", SUCCESS);
                 } else {
                     setStatus(result, ERROR);
                 }
+                dbh2.close();
 
                 break;
             case INSERT:
 
-                result = DatabaseHelper.launchUpdate(query, false);
-                if(result.substring(0,3).equals("oxo")) {
+                DatabaseHelper dbh3 = new DatabaseHelper();
+                result = dbh3.launchUpdate(query, false);
+                if (result.substring(0, 3).equals("oxo")) {
                     setStatus("Inserted " + result.substring(3) + " rows", SUCCESS);
                 } else {
                     setStatus(result, ERROR);
                 }
-
+                dbh3.close();
                 break;
             case DELETE:
 
-                result = DatabaseHelper.launchUpdate(query, false);
-                if(result.substring(0,3).equals("oxo")) {
+                DatabaseHelper dbh4 = new DatabaseHelper();
+                result = dbh4.launchUpdate(query, false);
+                if (result.substring(0, 3).equals("oxo")) {
                     setStatus("Deleted " + result.substring(3) + " rows", SUCCESS);
                 } else {
                     setStatus(result, ERROR);
                 }
-
+                dbh4.close();
                 break;
             default:
                 setStatus("only SELECT, UPDATE, INSERT, DELETE supported", ERROR);
                 break;
         }
 
-        Label label = new Label(query.replaceAll("\n",""));
+        Label label = new Label(query.replaceAll("\n", ""));
         label.setWrapText(true);
-        label.setPadding(new Insets(2,5,2,5));
+        label.setPadding(new Insets(2, 5, 2, 5));
         label.setStyle("-fx-background-color: #CEE0EF");
         HBox queryBox = new HBox(label);
         queryBox.setPadding(new Insets(10, 10, 10, 10));
@@ -243,7 +251,6 @@ public class SQLResults {
         }
 
     }
-
 
 
 }

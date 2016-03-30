@@ -95,7 +95,9 @@ public class NoticeHistory {
             query = "SELECT * FROM notice WHERE sender = " + Staff.ID;
         }
 
-        ResultSet cursor = DatabaseHelper.launchQuery(query);
+        DatabaseHelper dbh = new DatabaseHelper();
+        dbh.launchQuery(query);
+        ResultSet cursor = dbh.resultSet;
 
         try {
             while (cursor.next()) {
@@ -114,6 +116,8 @@ public class NoticeHistory {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            dbh.close();
         }
 
         // Container for table
